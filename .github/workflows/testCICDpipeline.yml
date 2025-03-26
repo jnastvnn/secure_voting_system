@@ -1,0 +1,40 @@
+name: Test CI/CD Pipeline
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Initialize CodeQL
+              uses: github/codeql-action/init@v2
+              with:
+                languages: javascript
+
+            - name: Perform CodeQL Analysis
+              uses: github/codeql-action/analyze@v2
+
+            - name: Run npm audit
+              run: npm audit
+
+            - name: OWASP Dependency-Check
+              uses: dependency-check/Dependency-Check_Action@main
+              with:
+                project: 'Secure Voting System'
+                path: '.'
+                format: 'HTML'
+                args: >
+                  --suppression ./.dependency-check/suppressions.xml
+                  --failOnCVSS 7
+
+              
+
