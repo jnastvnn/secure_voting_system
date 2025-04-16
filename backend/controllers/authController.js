@@ -1,4 +1,9 @@
 import User from '../models/User.js';
+import bcrypt from 'bcrypt'; // Import bcrypt for password hashing
+import jwt from 'jsonwebtoken'; // Import jsonwebtoken for token generation
+import dotenv from 'dotenv'; // Import dotenv to load environment variables
+
+dotenv.config(); // Load environment variables from .env file
 
 const authController = {
   async register(req, res) {
@@ -14,7 +19,10 @@ const authController = {
         return res.status(400).json({ error: 'Username already exists' });
       }
       
-      const user = await User.create(username, password);
+      const saltRounds = 10
+      const passwordHash = await bcrypt.hash(password, saltRounds)
+
+      const user = await User.create(username, passwordHash);
       res.status(201).json({ message: 'User registered successfully', user });
     } catch (err) {
       console.error('Error registering user:', err);
@@ -31,11 +39,24 @@ const authController = {
     
     try {
       const user = await User.findByUsername(username);
-      if (!user || user.password !== password) {
+      if (!user) {
         return res.status(401).json({ error: 'Invalid username or password' });
       }
       
-      res.json({ message: 'Login successful', user: { id: user.id, username: user.username } });
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+
+      const userForToken = {
+        username: user.username,
+        id: user.id,
+      }
+
+      const token = jwt.sign(userForToken, process.env.SECRET) // Generate JWT token
+
+      res.json({ message: 'Login successful',token, user: {id: user.id, username: user.username } });
+
     } catch (err) {
       console.error('Error logging in:', err);
       res.status(500).json({ error: 'Internal server error' });

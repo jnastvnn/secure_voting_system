@@ -25,7 +25,7 @@ app.use(express.static(path.join(__dirname, '../dist')));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/votes', voteRoutes);
+app.use('/api/polls', voteRoutes);
 
 // Serve React app for any other routes
 app.get('*', (req, res) => {
@@ -34,7 +34,7 @@ app.get('*', (req, res) => {
 
 // Function to start server with port finding
 const startServer = (port) => {
-  const server = app.listen(port, () => {
+  const SERVER = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   }).on('error', (e) => {
     if (e.code === 'EADDRINUSE') {

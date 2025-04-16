@@ -12,11 +12,11 @@ function Login({ onLoginSuccess }) {
     setError('');
     setSuccess(false);
     setIsLoading(true);
-    
+
     try {
       // Get API URL from environment variables
       const apiUrl = `${import.meta.env.VITE_API_URL}/auth/login`;
-      
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -24,22 +24,28 @@ function Login({ onLoginSuccess }) {
         },
         body: JSON.stringify({ username, password }),
       });
-      
+
       // Add error handling before parsing JSON
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Server response:', errorText);
-        throw new Error(`Login failed: ${response.status}`);
+        const parsedError = JSON.parse(errorText);
+        console.error('Server response:', parsedError.error);
+        throw new Error(`Login failed: ${parsedError.error} (${response.status})`);
       }
-      
+
       const data = await response.json();
-      
-      // Store user in localStorage for persistence
-      localStorage.setItem('currentUser', JSON.stringify(data.user));
-      
+
+      // Store user and token in localStorage for persistence
+      const currentUser = {
+        id: data.user.id,
+        username: data.user.username,
+        token: data.token, // Store the JWT token
+      };
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
       setSuccess(true);
       console.log('Login successful');
-      
+
       // Call the onLoginSuccess callback if provided
       if (onLoginSuccess) {
         onLoginSuccess();
@@ -91,4 +97,4 @@ function Login({ onLoginSuccess }) {
   );
 }
 
-export default Login; 
+export default Login;

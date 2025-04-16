@@ -14,34 +14,50 @@ async function initializeDatabase() {
     // Create users table if it doesn't exist
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+        id SERIAL PRIMARY KEY, -- PostgreSQL auto-incrementing integer
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL, -- For storing bcrypt/Argon2 hashes
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Timestamp with time zone
+        last_login TIMESTAMPTZ 
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS options (
+      id SERIAL PRIMARY KEY,
+      option_text TEXT NOT NULL UNIQUE -- Unique constraint good for reusable options like 'Yes'/'No'
+    )`);  
 
     // Create votes table if it doesn't exist
     await client.query(`
-      CREATE TABLE IF NOT EXISTS votes (
+      CREATE TABLE IF NOT EXISTS polls (
         id SERIAL PRIMARY KEY,
-        title VARCHAR(100) NOT NULL,
-        options JSONB NOT NULL,
-        votes JSONB NOT NULL DEFAULT '{}',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL, -- ON DELETE SET NULL: If user deleted, poll creator becomes NULL
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        allow_multiple_choices BOOLEAN DEFAULT FALSE)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS poll_options (
+        poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE, -- If poll deleted, these links are removed
+        option_id INTEGER NOT NULL REFERENCES options(id) ON DELETE CASCADE, -- If option deleted, remove links
+        PRIMARY KEY (poll_id, option_id) -- Composite primary key to ensure unique poll-option pairs
+)
     `);
 
-    // Check if there are any votes, if not, add some initial votes
-    const votesResult = await client.query('SELECT * FROM votes');
-    if (votesResult.rows.length === 0) {
-      await client.query(`
-        INSERT INTO votes (title, options, votes) VALUES 
-        ('Best Programming Language', '["JavaScript", "Python", "Java", "C++", "Go"]', '{}'),
-        ('Favorite Frontend Framework', '["React", "Vue", "Angular", "Svelte"]', '{}'),
-        ('Best Database', '["PostgreSQL", "MySQL", "MongoDB", "SQLite", "Redis"]', '{}')
-      `);
-    }
+    await client.query(`  
+      CREATE TABLE IF NOT EXISTS votes (
+        id SERIAL PRIMARY KEY, -- Optional, but useful for referencing individual vote records
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- If user deleted, their votes are removed
+        poll_id INTEGER NOT NULL,
+        option_id INTEGER NOT NULL,
+        voted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, poll_id, option_id), -- User can vote for a specific option in a poll only once
+        FOREIGN KEY (poll_id, option_id) REFERENCES poll_options (poll_id, option_id) ON DELETE CASCADE -- Ensures vote is for a valid poll-option pair
+)
+    `);
+
+    
+
     
     client.release();
     console.log('Database initialized successfully');
@@ -63,35 +79,7 @@ async function initializeDatabase() {
       ]));
     }
     
-    const votesPath = path.join(dataDir, 'votes.json');
-    if (!fs.existsSync(votesPath)) {
-      fs.writeFileSync(votesPath, JSON.stringify([
-        { 
-          id: 1, 
-          title: 'Best Programming Language', 
-          options: ['JavaScript', 'Python', 'Java', 'C++', 'Go'], 
-          votes: {}, 
-          created_at: new Date().toISOString() 
-        },
-        { 
-          id: 2, 
-          title: 'Favorite Frontend Framework', 
-          options: ['React', 'Vue', 'Angular', 'Svelte'], 
-          votes: {}, 
-          created_at: new Date().toISOString() 
-        },
-        { 
-          id: 3, 
-          title: 'Best Database', 
-          options: ['PostgreSQL', 'MySQL', 'MongoDB', 'SQLite', 'Redis'], 
-          votes: {}, 
-          created_at: new Date().toISOString() 
-        }
-      ]));
-    }
-    
-    // We don't throw the error so the application can continue with local storage
-    return 'local';
+
   }
   return 'database';
 }

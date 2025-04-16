@@ -28,7 +28,31 @@ const voteController = {
       console.error('Error submitting vote:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
+  },
+  
+  async createVote(req, res) {
+    const { title, description, allow_multiple_choices, options } = req.body;
+    console.log('Request body:', req.body); 
+    console.log('User from JWT:', req.user.id);
+    // Validate required fields (options removed)
+    if (!title || !description) {
+      console.log('Creating vote with data:', req.body);
+      return res.status(400).json({ error: 'Title, description, and creator ID are required' });
+    }
+  
+    try {
+      // Create the poll in the database using the updated Vote.create method
+      const newVote = await Vote.create(title, description, req.user.id, allow_multiple_choices, options);
+  
+      // Respond with the created poll
+      res.status(201).json(newVote);
+    } catch (err) {
+      console.error('Error creating vote:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
+  
+
 };
 
 export default voteController; 

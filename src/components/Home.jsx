@@ -22,7 +22,7 @@ function Home({ onLogout }) {
   const fetchVotes = async () => {
     try {
       setIsLoading(true);
-      const apiUrl = `${import.meta.env.VITE_API_URL}/votes`;
+      const apiUrl = `${import.meta.env.VITE_API_URL}/poll`;
       const response = await fetch(apiUrl);
       
       if (!response.ok) {
@@ -96,7 +96,6 @@ function Home({ onLogout }) {
       // Reset selection
       setSelectedOption('');
       
-      alert('Vote submitted successfully!');
     } catch (err) {
       console.error('Error submitting vote:', err);
       setError(err.message || 'Failed to submit vote. Please try again.');
@@ -120,6 +119,31 @@ function Home({ onLogout }) {
   if (!currentVote) {
     return <div>No votes available.</div>;
   }
+
+  // Calculate the total number of votes
+  const calculateResults = () => {
+    if (!currentVote || !currentVote.votes) return {};
+    
+    // Create a result object with all options initialized to 0
+    const results = {};
+    currentVote.options.forEach(option => {
+      results[option] = 0;
+    });
+    
+    // Count votes for each option
+    Object.entries(currentVote.votes).forEach(([voter, option]) => {
+      if (results[option] !== undefined) {
+        results[option] += 1;
+      }
+    });
+    
+    // Calculate total votes
+    const totalVotes = Object.values(results).reduce((sum, count) => sum + count, 0);
+    
+    return { results, totalVotes };
+  };
+  
+  const { results, totalVotes } = calculateResults();
 
   return (
     <div className="home-container">
@@ -165,12 +189,11 @@ function Home({ onLogout }) {
               {isLoading ? 'Submitting...' : 'Submit Vote'}
             </button>
           </form>
-          
+  
           <div className="results">
             <h3>Current Results:</h3>
             {currentVote.options.map(option => {
-              const voteCount = currentVote.votes[option] || 0;
-              const totalVotes = Object.values(currentVote.votes || {}).reduce((sum, count) => sum + count, 0);
+              const voteCount = results[option] || 0;
               const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
               
               return (
@@ -193,4 +216,4 @@ function Home({ onLogout }) {
   );
 }
 
-export default Home; 
+export default Home;
