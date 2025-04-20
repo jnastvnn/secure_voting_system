@@ -1,43 +1,29 @@
 import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { createPollStart, createPollSuccess, createPollFailure } from '../store/slices/pollsSlice';
 
-// Helper function to get the JWT from localStorage
-const getJWTToken = () => {
-  try {
-    const userString = localStorage.getItem('currentUser');
-
-    if (!userString) return null;
-    const user = JSON.parse(userString);
-    // console.log("Parsed User:", user); // Debug logging commented out to avoid exposing sensitive data
-    return user.token || null;
-  } catch (error) {
-    console.error("Error retrieving token from localStorage:", error);
-    return null;
-  }
-};
-
-function CreatePoll({ onCancel, onPollCreated }) {
+function CreatePoll({ onCancel }) {
   const [pollData, setPollData] = useState({
     title: '',
     description: '',
     options: ['', ''],
     allow_multiple_choices: false,
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  // Update text inputs (title, description)
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector(state => state.polls);
+  const { user } = useSelector(state => state.auth);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setPollData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Update checkbox
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
     setPollData(prev => ({ ...prev, [name]: checked }));
   };
 
-  // Update individual option text input
   const handleOptionChange = (index, value) => {
     if (value.length > 255) return;
     const newOptions = [...pollData.options];
@@ -45,67 +31,55 @@ function CreatePoll({ onCancel, onPollCreated }) {
     setPollData(prev => ({ ...prev, options: newOptions }));
   };
 
-  // Add a new empty option field
   const addOption = () => {
-    setError('');
     setPollData(prev => ({ ...prev, options: [...prev.options, ''] }));
   };
 
-  // Remove an option field (minimum of 2 options required)
   const removeOption = (index) => {
-    if (pollData.options.length <= 2) {
-      setError("Minimum of 2 options required.");
-      return;
-    }
-    setError('');
+    if (pollData.options.length <= 2) return;
     const newOptions = pollData.options.filter((_, i) => i !== index);
     setPollData(prev => ({ ...prev, options: newOptions }));
   };
 
-  // Handles form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     // Client-side validation
     const trimmedTitle = pollData.title.trim();
     const trimmedDescription = pollData.description.trim();
     const validOptions = pollData.options.map(o => o.trim()).filter(o => o !== '');
 
-    if (!trimmedTitle) return setError('Title is required');
-    if (!trimmedDescription) return setError('Description is required');
-    if (validOptions.length < 2) return setError('At least two non-empty options are required');
-    if (validOptions.length !== pollData.options.length) {
-      return setError('All options must have text. Remove empty fields or fill them.');
-    }
-    if (new Set(validOptions).size !== validOptions.length) {
-      return setError("Duplicate options are not allowed.");
-    }
-
-    const token = getJWTToken();
-    console.log("Token:", token);
-    if (!token) {
-      setError('You must be logged in to create a poll.');
+    if (!trimmedTitle || !trimmedDescription || validOptions.length < 2) {
+      dispatch(createPollFailure('Please fill in all required fields'));
       return;
     }
 
-    // Prepare payload (note: backend uses JWT to determine the user)
-    const payload = {
-      title: trimmedTitle,
-      description: trimmedDescription,
-      allow_multiple_choices: pollData.allow_multiple_choices,
-      options: validOptions,
-    };
+    if (new Set(validOptions).size !== validOptions.length) {
+      dispatch(createPollFailure('Duplicate options are not allowed'));
+      return;
+    }
+
+    const token = user?.token;
+    if (!token) {
+      dispatch(createPollFailure('You must be logged in to create a poll'));
+      return;
+    }
+
+    dispatch(createPollStart());
 
     try {
-      setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/polls/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title: trimmedTitle,
+          description: trimmedDescription,
+          allow_multiple_choices: pollData.allow_multiple_choices,
+          options: validOptions,
+        }),
       });
 
       const responseData = await response.json();
@@ -113,20 +87,17 @@ function CreatePoll({ onCancel, onPollCreated }) {
         throw new Error(responseData.message || `Failed to create poll (Status: ${response.status})`);
       }
 
-      console.log('Poll created successfully:', responseData);
-      onPollCreated?.(responseData);
-      // Reset form state
+      dispatch(createPollSuccess(responseData));
       setPollData({
         title: '',
         description: '',
         options: ['', ''],
         allow_multiple_choices: false,
       });
+      onCancel?.();
     } catch (err) {
       console.error("Create poll error:", err);
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setLoading(false);
+      dispatch(createPollFailure(err.message || 'An unexpected error occurred'));
     }
   };
 
@@ -146,6 +117,7 @@ function CreatePoll({ onCancel, onPollCreated }) {
             placeholder="What is your question?"
             maxLength={255}
             required
+            disabled={loading}
           />
         </div>
         <div className="form-group">
@@ -158,6 +130,7 @@ function CreatePoll({ onCancel, onPollCreated }) {
             placeholder="Add more context (optional)"
             rows={3}
             required
+            disabled={loading}
           />
         </div>
         <div className="form-group">
@@ -171,6 +144,7 @@ function CreatePoll({ onCancel, onPollCreated }) {
                 placeholder={`Option ${index + 1}`}
                 required
                 maxLength={255}
+                disabled={loading}
               />
               {pollData.options.length > 2 && (
                 <button
@@ -178,13 +152,19 @@ function CreatePoll({ onCancel, onPollCreated }) {
                   onClick={() => removeOption(index)}
                   className="remove-option-btn"
                   aria-label={`Remove option ${index + 1}`}
+                  disabled={loading}
                 >
                   &times;
                 </button>
               )}
             </div>
           ))}
-          <button type="button" onClick={addOption} disabled={pollData.options.length >= 10} className="add-option-btn">
+          <button 
+            type="button" 
+            onClick={addOption} 
+            disabled={loading || pollData.options.length >= 10} 
+            className="add-option-btn"
+          >
             Add Option
           </button>
         </div>
@@ -196,6 +176,7 @@ function CreatePoll({ onCancel, onPollCreated }) {
             checked={pollData.allow_multiple_choices}
             onChange={handleCheckboxChange}
             className="form-check-input"
+            disabled={loading}
           />
           <label htmlFor="allow_multiple_choices" className="form-check-label">
             Allow multiple choices per voter?

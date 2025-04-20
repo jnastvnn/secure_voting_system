@@ -1,22 +1,20 @@
 import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
 
-function Login({ onLoginSuccess }) {
+function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector(state => state.auth);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess(false);
-    setIsLoading(true);
+    dispatch(loginStart());
 
     try {
-      // Get API URL from environment variables
       const apiUrl = `${import.meta.env.VITE_API_URL}/auth/login`;
-
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -25,12 +23,10 @@ function Login({ onLoginSuccess }) {
         body: JSON.stringify({ username, password }),
       });
 
-      // Add error handling before parsing JSON
       if (!response.ok) {
         const errorText = await response.text();
         const parsedError = JSON.parse(errorText);
-        console.error('Server response:', parsedError.error);
-        throw new Error(`Login failed: ${parsedError.error} (${response.status})`);
+        throw new Error(`Login failed: ${parsedError.error}`);
       }
 
       const data = await response.json();
@@ -39,22 +35,14 @@ function Login({ onLoginSuccess }) {
       const currentUser = {
         id: data.user.id,
         username: data.user.username,
-        token: data.token, // Store the JWT token
+        token: data.token,
       };
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-      setSuccess(true);
-      console.log('Login successful');
-
-      // Call the onLoginSuccess callback if provided
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      }
+      dispatch(loginSuccess(currentUser));
     } catch (err) {
-      setError(err.message || 'Login failed');
+      dispatch(loginFailure(err.message));
       console.error('Login error:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -62,7 +50,6 @@ function Login({ onLoginSuccess }) {
     <div className="login-container">
       <h2>Login</h2>
       {error && <p className="error">{error}</p>}
-      {success && <p className="success">Login successful!</p>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="username">Username:</label>
@@ -72,7 +59,7 @@ function Login({ onLoginSuccess }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
         </div>
         <div className="form-group">
@@ -83,11 +70,11 @@ function Login({ onLoginSuccess }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
         </div>
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
+        <button type="submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
         </button>
         <p className="test-user-note">
           <small>Demo user: admin / password</small>

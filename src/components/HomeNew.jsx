@@ -1,71 +1,60 @@
 import { useState, useEffect } from 'react';
-import VotePoll from './VotePoll'; // Assuming this is the correct import path
-
-const getJWTToken = () => {
-  try {
-    return localStorage.getItem('jwtToken') || 
-           JSON.parse(localStorage.getItem('currentUser'))?.token;
-  } catch (error) {
-    console.error("Error retrieving token:", error);
-    return null;
-  }
-};
+import { useDispatch, useSelector } from 'react-redux';
+import VotePoll from './VotePoll';
+import { fetchPollsStart, fetchPollsSuccess, fetchPollsFailure, setSelectedPoll } from '../store/slices/pollsSlice';
 
 function Home({ onLogout }) {
-  const [user, setUser] = useState(null);
-  const [polls, setPolls] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedPoll, setSelectedPoll] = useState(null);
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+  const { polls, loading, error, selectedPoll } = useSelector(state => state.polls);
 
   useEffect(() => {
     const token = getJWTToken();
-    const userData = localStorage.getItem('currentUser');
-
-    if (!userData || !token) {
-      handleLogout();
+    if (!token) {
+      onLogout();
       return;
     }
-
-    try {
-      setUser(JSON.parse(userData));
-      fetchPolls(token);
-    } catch (err) {
-      handleLogout();
-    }
+    fetchPolls(token);
   }, []);
+
+  const getJWTToken = () => {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      if (!userData) return null;
+      return JSON.parse(userData).token;
+    } catch (error) {
+      console.error("Error retrieving token:", error);
+      return null;
+    }
+  };
 
   const fetchPolls = async (token) => {
     try {
-      setIsLoading(true);
+      dispatch(fetchPollsStart());
       const response = await fetch(`${import.meta.env.VITE_API_URL}/polls`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.status === 401) handleLogout();
+      if (response.status === 401) {
+        onLogout();
+        return;
+      }
+      
       if (!response.ok) throw new Error('Failed to load polls');
       
-      setPolls(await response.json());
-      setError('');
+      const data = await response.json();
+      dispatch(fetchPollsSuccess(data));
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      dispatch(fetchPollsFailure(err.message));
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('jwtToken');
-    onLogout?.();
-  };
-
   if (!user) return <div>Please login to view polls</div>;
-  if (isLoading) return <div>Loading polls...</div>;
+  if (loading) return <div>Loading polls...</div>;
   if (error) return <div>Error: {error}</div>;
 
   if (selectedPoll) {
-    return <VotePoll poll={selectedPoll} onBack={() => setSelectedPoll(null)} />;
+    return <VotePoll poll={selectedPoll} onBack={() => dispatch(setSelectedPoll(null))} />;
   }
 
   return (
@@ -82,7 +71,7 @@ function Home({ onLogout }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ color: '#666' }}>{user.username}</span>
           <button 
-            onClick={handleLogout}
+            onClick={onLogout}
             style={{ 
               padding: '8px 16px',
               border: '1px solid #ddd',
@@ -100,12 +89,13 @@ function Home({ onLogout }) {
         {polls.map(poll => (
           <div 
             key={poll.id}
-            onClick={() => setSelectedPoll(poll)}
+            onClick={() => dispatch(setSelectedPoll(poll))}
             style={{
               padding: '20px',
               border: '1px solid #eee',
               borderRadius: '8px',
-              backgroundColor: '#fff'
+              backgroundColor: '#fff',
+              cursor: 'pointer'
             }}
           >
             <div style={{ marginBottom: '10px' }}>
