@@ -63,12 +63,14 @@ jobs:
             --failOnCVSS 7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -76,18 +78,22 @@ jobs:
           scan-type: 'fs'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+          output: 'trivy-results.json'
+          format: 'json'
 
       - name: Upload Dependency-Check report
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: ${{ github.workspace }}/reports
+          path: ${{ github.workspace }}/dependency-check-report.html
+          retention-days: 30
 
       - name: Upload Trivy report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: trivy-report.json
+          path: trivy-results.json
+          retention-days: 30
 
 
 
