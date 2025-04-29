@@ -1,5 +1,4 @@
-name: Test CI/CD Pipeline
-
+name: CI/CD Pipeline
 permissions:
   security-events: write
   actions: read
@@ -15,6 +14,7 @@ on:
 
 jobs:
   build:
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -24,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
       - name: Install frontend dependencies
         run: npm ci
@@ -35,37 +36,90 @@ jobs:
 
       - name: Lint frontend
         run: npm run lint
-        continue-on-error: true
-
+        
       - name: Build frontend
         run: npm run build
 
-      - name: Run frontend tests (if present)
+      - name: Run frontend tests
         run: npm test || echo "No frontend tests defined."
-        continue-on-error: true
 
-      - name: Run backend tests (if present)
+      - name: Run backend tests
         run: |
           cd backend
           npm test || echo "No backend tests defined."
-        continue-on-error: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: |
+            build/
+            dist/
+          retention-days: 7
+
+  security-scan:
+    name: Security Scanning
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
 
       - name: Run npm audit (frontend)
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
+        continue-on-error: true
 
       - name: Run npm audit (backend)
         run: |
           cd backend
-          npm audit --audit-level=high || true
+          npm audit --audit-level=high
+        continue-on-error: true
 
       - name: OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
+        uses: dependency-check/Dependency-Check_Action@v2.7.2
         with:
           project: 'Secure Voting System'
           path: '.'
           format: 'HTML'
           args: >
             --failOnCVSS 7
+
+      - name: Upload Dependency-Check report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: ${{ github.workspace }}/dependency-check-report.html
+          retention-days: 30
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          output: 'trivy-results.json'
+          format: 'json'
+
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-results.json
+          retention-days: 30
+
+  analyze:
+    name: CodeQL Analysis
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -77,36 +131,17 @@ jobs:
         with:
           category: "/language:javascript"
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-          output: 'trivy-results.json'
-          format: 'json'
-
-      - name: Upload Dependency-Check report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: ${{ github.workspace }}/dependency-check-report.html
-          retention-days: 30
-
-      - name: Upload Trivy report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report
-          path: trivy-results.json
-          retention-days: 30
-
-  analyze:
-    name: Analyze
+  deploy:
+    name: Deploy
+    needs: [security-scan, analyze]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-
-
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+          path: build/
