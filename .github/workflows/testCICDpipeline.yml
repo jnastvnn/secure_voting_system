@@ -1,5 +1,10 @@
 name: Test CI/CD Pipeline
 
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
 on:
   push:
     branches:
@@ -94,6 +99,14 @@ jobs:
           name: trivy-report
           path: trivy-results.json
           retention-days: 30
+
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
 
 
