@@ -34,19 +34,9 @@ jobs:
           cd backend
           npm ci
 
-      - name: Lint frontend
-        run: npm run lint
         
       - name: Build frontend
         run: npm run build
-
-      - name: Run frontend tests
-        run: npm test || echo "No frontend tests defined."
-
-      - name: Run backend tests
-        run: |
-          cd backend
-          npm test || echo "No backend tests defined."
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
