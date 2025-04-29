@@ -40,6 +40,18 @@ export const pollsSlice = createSlice({
       state.loading = false;
       state.error = action.payload;
     },
+
+    submitVoteStart: (state) => {
+      state.loading = true;
+    },
+    submitVoteSuccess: (state, action) => {
+      state.loading = false;
+      // Update poll with new vote
+    },
+    submitVoteFailure: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    }
   },
 });
 
@@ -51,6 +63,9 @@ export const {
   createPollStart,
   createPollSuccess,
   createPollFailure,
+  submitVoteStart,
+  submitVoteSuccess,
+  submitVoteFailure,
 } = pollsSlice.actions;
 
 export default pollsSlice.reducer;

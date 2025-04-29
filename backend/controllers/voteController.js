@@ -1,3 +1,4 @@
+
 import Vote from '../models/Vote.js';
 
 const voteController = {
@@ -11,15 +12,46 @@ const voteController = {
     }
   },
 
-  async submitVote(req, res) {
-    const { voteId, option, userId } = req.body;
+  async getOptionById(req, res) {
+    const { id } = req.params;
+    try {
+      const vote = await Vote.getOptionById(id);
+      if (!vote) {
+        return res.status(404).json({ error: 'Vote not found' });
+      }
+      res.json(vote);
+    } catch (err) {
+      console.error('Error fetching vote by ID:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+
+  async getVoteCountsByPollId(req, res) {
     
-    if (!voteId || !option || !userId) {
-      return res.status(400).json({ error: 'Vote ID, option, and user ID are required' });
+    const { id } = req.params;
+    try {
+      const voteCounts = await Vote.getVoteCountsByPollId(id);
+      if (!voteCounts) {
+        return res.status(404).json({ error: 'Vote counts not found' });
+      }
+      console.log('Vote counts:', voteCounts); // Log the vote counts for debugging
+      res.json(voteCounts);
+    } catch (err) {
+      console.error('Error fetching vote counts:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+
+  async submitVote(req, res) {
+    const {pollId, optionId, userId } = req.body;
+    console.log(pollId, optionId, userId); // Log the request body for debugging
+    
+    if (!pollId || !optionId || !userId) {
+      return res.status(400).json({ error: 'Poll ID, option ID, and user ID are required' });
     }
     
     try {
-      const updatedVote = await Vote.submitVote(voteId, userId, option);
+      const updatedVote = await Vote.submitVote(pollId, optionId, userId);
       if (!updatedVote) {
         return res.status(404).json({ error: 'Vote not found' });
       }

@@ -57,22 +57,72 @@ class Vote {
   }
 
   static async getById(id) {
-    const result = await pool.query('SELECT * FROM votes WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM polls WHERE id = $1', [id]);
     return result.rows[0];
   }
 
-  static async submitVote(voteId, userId, option) {
-    const vote = await this.getById(voteId);
-    if (!vote) return null;
-
-    const votes = vote.votes || {};
-    votes[userId] = option;
-
-    const result = await pool.query(
-      'UPDATE votes SET votes = $1 WHERE id = $2 RETURNING *',
-      [JSON.stringify(votes), voteId]
-    );
+  static async getNumberOfVotesById(id) {
+    const result = await pool.query('SELECT votes FROM votes WHERE id = $1', [id]);
     return result.rows[0];
+  }
+
+  static async getVoteCountsByPollId(pollId) {
+    
+    const result = await pool.query(
+      `SELECT o.id AS option_id, o.option_text, COUNT(v.id) AS vote_count
+       FROM options o
+       LEFT JOIN votes v ON o.id = v.option_id
+       WHERE o.id IN (SELECT option_id FROM poll_options WHERE poll_id = $1)
+       GROUP BY o.id, o.option_text`,
+      [pollId]
+    );
+    
+    const voteCounts = {};
+    result.rows.forEach(row => {
+      voteCounts[row.option_id] = row.vote_count;
+    });
+    
+    return voteCounts;
+  }
+
+  static async submitVote(pollId, optionId, userId) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Try to update existing vote first
+      const updateResult = await client.query(
+        `UPDATE votes 
+         SET option_id = $2, voted_at = NOW() 
+         WHERE poll_id = $1 AND user_id = $3 
+         RETURNING *`,
+        [pollId, optionId, userId]
+      );
+
+  
+      // If no existing vote was found, insert new one
+      if (updateResult.rows.length === 0) {
+        const insertResult = await client.query(
+          `INSERT INTO votes (poll_id, option_id, user_id, voted_at) 
+           VALUES ($1, $2, $3, NOW()) 
+           RETURNING *`,
+          [pollId, optionId, userId]
+        );
+        await client.query('COMMIT');
+        
+        return insertResult.rows[0];
+
+      }
+  
+      await client.query('COMMIT');
+      return updateResult.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw new Error(`Failed to submit vote: ${error.message}`);
+    } finally {
+      client.release();
+    }
   }
 
   static async create(title, description, createdBy, allow_multiple_choices, options) {

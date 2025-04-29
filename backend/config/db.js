@@ -34,6 +34,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('aivencloud'))
 
 // Create connection pool
 console.log(`SSL config: ${JSON.stringify(sslConfig)}`);
+console.log(`Database URL: ${process.env.DATABASE_URL}`);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig

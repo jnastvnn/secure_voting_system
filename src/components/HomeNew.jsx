@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import VotePoll from './VotePoll';
 import { fetchPollsStart, fetchPollsSuccess, fetchPollsFailure, setSelectedPoll } from '../store/slices/pollsSlice';
