@@ -17,9 +17,15 @@ function Home({ onLogout, onCreatePoll }) {
   const [secureError, setSecureError] = useState(null);
 
   useEffect(() => {
+    // Load both standard and secure polls when component mounts
+    loadData();
+  }, []);
+
+  // Consolidated function to load all data
+  const loadData = () => {
     fetchPolls();
     fetchSecurePolls();
-  }, []);
+  };
 
   const fetchPolls = async () => {
     try {
@@ -67,23 +73,41 @@ function Home({ onLogout, onCreatePoll }) {
     }
   };
 
+  // Helper function for handling poll selection
+  const handlePollSelect = (poll, isSecure) => {
+    if (isSecure) {
+      setSelectedSecurePoll(poll);
+    } else {
+      dispatch(setSelectedPoll(poll));
+    }
+  };
+
+  // Helper function to go back from a poll
+  const handleBack = (isSecure) => {
+    if (isSecure) {
+      setSelectedSecurePoll(null);
+    } else {
+      dispatch(setSelectedPoll(null));
+    }
+  };
+
   if (!user) return <div>Please login to view polls</div>;
   
   // Show selected poll if any
   if (selectedPoll && !secureMode) {
-    return <VotePoll poll={selectedPoll} onBack={() => dispatch(setSelectedPoll(null))} />;
+    return <VotePoll poll={selectedPoll} onBack={() => handleBack(false)} />;
   }
   
   // Show selected secure poll if any
   if (selectedSecurePoll && secureMode) {
-    return <SecureVotePoll poll={selectedSecurePoll} onBack={() => setSelectedSecurePoll(null)} />;
+    return <SecureVotePoll poll={selectedSecurePoll} onBack={() => handleBack(true)} />;
   }
 
   // Helper function to render poll item
   const renderPollItem = (poll, isSecure = false) => (
     <div 
       key={poll.id}
-      onClick={() => isSecure ? setSelectedSecurePoll(poll) : dispatch(setSelectedPoll(poll))}
+      onClick={() => handlePollSelect(poll, isSecure)}
       className="poll-item"
     >
       <div className="poll-content">
@@ -109,6 +133,28 @@ function Home({ onLogout, onCreatePoll }) {
           {isSecure && <span>Options: {poll.options.length}</span>}
         </div>
       </div>
+    </div>
+  );
+
+  const renderPollsList = (pollsList, isLoading, errorMsg, isSecure) => (
+    <div className="polls-container">
+      {errorMsg && <div className="error-message">{errorMsg}</div>}
+      {isLoading ? (
+        <div>Loading polls...</div>
+      ) : pollsList.length === 0 ? (
+        <div className="no-polls">
+          <p>No {isSecure ? 'secure ' : ''}polls available yet.</p>
+          {isSecure && (
+            <p className="info-text">
+              Secure polls implement: Ballot Secrecy, Individual Verifiability, and Homomorphic-like Vote Counting.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="polls-grid">
+          {pollsList.map(poll => renderPollItem(poll, isSecure))}
+        </div>
+      )}
     </div>
   );
 
@@ -139,41 +185,10 @@ function Home({ onLogout, onCreatePoll }) {
         </div>
       </div>
 
-      {secureMode ? (
-        // Secure Voting UI
-        <div className="polls-container">
-          {secureError && <div className="error-message">{secureError}</div>}
-          {loadingSecurePolls ? (
-            <div>Loading secure polls...</div>
-          ) : securePolls.length === 0 ? (
-            <div className="no-polls">
-              <p>No secure polls available yet.</p>
-              <p className="info-text">
-                Secure polls implement: Ballot Secrecy, Individual Verifiability, and Homomorphic-like Vote Counting.
-              </p>
-            </div>
-          ) : (
-            <div className="polls-grid">
-              {securePolls.map(poll => renderPollItem(poll, true))}
-            </div>
-          )}
-        </div>
-      ) : (
-        // Standard Polls UI
-        <div className="polls-container">
-          {loading ? (
-            <div>Loading polls...</div>
-          ) : error ? (
-            <div className="error-message">{error}</div>
-          ) : polls.length === 0 ? (
-            <div className="no-polls">No polls available</div>
-          ) : (
-            <div className="polls-grid">
-              {polls.map(poll => renderPollItem(poll))}
-            </div>
-          )}
-        </div>
-      )}
+      {secureMode
+        ? renderPollsList(securePolls, loadingSecurePolls, secureError, true)
+        : renderPollsList(polls, loading, error, false)
+      }
     </div>
   );
 }

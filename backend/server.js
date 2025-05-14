@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+// import csrfProtection from './middleware/csrfMiddleware.js'; // Removed CSRF
 
 import authRoutes from './routes/authRoutes.js';
 import voteRoutes from './routes/voteRoutes.js';
@@ -31,7 +32,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 login/register attempts per windowMs
+  max: 50, // limit each IP to 5 login/register attempts per windowMs
   standardHeaders: true,
   message: { error: 'Too many login attempts, please try again later' }
 });
@@ -43,17 +44,28 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, '../dist')));
 
 // Apply rate limiting
 app.use('/api/', generalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Create CSRF token endpoint - REMOVED
+// app.get('/api/csrf-token', (req, res) => {
+//   const token = csrfProtection.generateToken(req, res);
+//   res.json({ csrfToken: token });
+// });
+
+// Add CSRF protection for non-GET routes - REMOVED
+// app.use(csrfProtection.doubleCsrfProtection);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/polls', voteRoutes);
 app.use('/api/secure-polls', secureVoteRoutes);
+
+// Serve static files after API routes
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Serve React app for any other routes
 app.get('*', (req, res) => {

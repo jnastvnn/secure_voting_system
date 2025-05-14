@@ -34,11 +34,7 @@ const secureVoteController = {
     try {
       // Check if user has already voted
       const hasVoted = await SecureVote.hasUserVoted(userId, pollId);
-      
-      // If they have voted, we'll update their vote (which is fine in our system)
-      // But we might want to inform them
-      
-      // Submit the vote securely
+
       const result = await SecureVote.submitVote(pollId, optionId, userId);
       
       // Return the verification token to the user so they can verify their vote later

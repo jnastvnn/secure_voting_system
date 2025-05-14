@@ -13,7 +13,6 @@ function CreatePoll({ onCancel }) {
 
   const dispatch = useDispatch();
   const { loading, error } = useSelector(state => state.polls);
-  const { user } = useSelector(state => state.auth);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -73,7 +72,7 @@ function CreatePoll({ onCancel }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies for auth
+        credentials: 'include',
         body: JSON.stringify({
           title: trimmedTitle,
           description: trimmedDescription,
@@ -88,18 +87,22 @@ function CreatePoll({ onCancel }) {
       }
 
       dispatch(createPollSuccess(responseData));
-      setPollData({
-        title: '',
-        description: '',
-        options: ['', ''],
-        allow_multiple_choices: false,
-        is_secure: false,
-      });
+      resetForm();
       onCancel?.();
     } catch (err) {
       console.error("Create poll error:", err);
       dispatch(createPollFailure(err.message || 'An unexpected error occurred'));
     }
+  };
+
+  const resetForm = () => {
+    setPollData({
+      title: '',
+      description: '',
+      options: ['', ''],
+      allow_multiple_choices: false,
+      is_secure: false,
+    });
   };
 
   return (

@@ -1,93 +1,140 @@
 # Secure Voting System
 
-A secure voting application with backend authentication and database storage.
-
-## Project Structure
-
-- **Frontend**: React application with Vite
-- **Backend**: Express server for authentication and data storage
-- **Database**: PostgreSQL for user management and vote storage
-
+A secure electronic voting application with cryptographic verification features, secure authentication, and database storage.
 
 ## Features
 
-- User registration with PostgreSQL database
-- User login with secure authentication
-- Dynamic voting system with real-time updates
-- Backend API for data persistence
+- **Secure Authentication**: Password hashing, HTTP-only cookies, and JWT tokens
+- **Individual Verifiability**: Voters can verify their votes were counted correctly
+- **Ballot Secrecy**: Voter identities are separated from their choices
+- **Homomorphic-like Vote Counting**: Votes are tallied without decrypting individual ballots
+- **Rate Limiting**: Protection against brute force and DOS attacks
+- **Database Storage**: PostgreSQL for secure, reliable data persistence
 
-## Database Schema
+## Technologies
 
-The application uses two main tables:
+- **Frontend**: React, Redux Toolkit, CryptoJS
+- **Backend**: Express.js, PostgreSQL
+- **Security**: JWT, bcrypt, rate limiting
 
-1. **users** - Stores user credentials
-   - id (SERIAL PRIMARY KEY)
-   - username (VARCHAR, UNIQUE)
-   - password (VARCHAR)
-   - created_at (TIMESTAMP)
+## Installation & Setup
 
-2. **votes** - Stores voting topics and results
-   - id (SERIAL PRIMARY KEY)
-   - title (VARCHAR)
-   - options (JSONB)
-   - votes (JSONB)
-   - created_at (TIMESTAMP)
+### Prerequisites
+- Node.js (v16+)
+- npm or yarn
+- PostgreSQL database
 
-## API Endpoints
+### Environment Setup
+1. Create a `.env` file in the root directory with the following variables:
+```
+DATABASE_URL=postgres://username:password@localhost:5432/voting_db
+PORT=3000
+SECRET=your_jwt_secret_key
+FRONTEND_URL=http://localhost:5173
+VOTE_ENCRYPTION_KEY=your_vote_encryption_key
+NODE_ENV=development
+```
 
-- **POST /api/register** - Register a new user
-- **POST /api/login** - Authenticate a user
-- **GET /api/votes** - Get all available votes
-- **POST /api/vote** - Submit a vote
+### Database Setup
+1. Create a PostgreSQL database:
+```sql
+CREATE DATABASE voting_db;
+```
+2. The application will automatically create the required tables on first run.
 
-## Security Notes
+### Installation Steps
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/secure_voting_system.git
+cd secure_voting_system
+```
 
-This is a simplified demo. In a production environment, you should:
-- Hash passwords
-- Use HTTPS
-- Implement proper session management with JWT
-- Add rate limiting
-- Add input validation and sanitization
+2. Install dependencies for both frontend and backend:
+```bash
+npm install
+cd backend
+npm install
+cd ..
+```
 
-## Demo User
+3. Start the development servers:
+```bash
+npm run dev
+```
+This will start both the frontend server (on port 5173) and the backend server (on port 3000).
 
-The application automatically creates a demo user on first signup:
-- Username: admin
-- Password: password
+4. Access the application at `http://localhost:5173`
 
-## How It Works
+### Production Deployment
+To build and run in production:
 
-1. **User Registration**: New user data is stored in the PostgreSQL database
-2. **Authentication**: Login credentials are verified against the PostgreSQL database
-3. **Session Management**: Current user is stored in the PostgreSQL database
+```bash
+npm run build
+npm start
+```
 
-## Backend Structure
+## Project Structure
 
 ```
-/backend
-  /controllers     # Request handlers
-  /models         # Database models
-  /routes         # API routes
-  /config         # Configuration files
-/src
-  /components     # React components
-  /utils          # Utility functions
+secure_voting_system/
+├── backend/                # Backend server code
+│   ├── controllers/        # Request handlers
+│   ├── middleware/         # Authentication & rate limiting
+│   ├── models/             # Database models
+│   ├── routes/             # API routes
+│   ├── utils/              # Cryptographic utilities
+│   └── server.js           # Express server entry point
+├── src/                    # Frontend React code
+│   ├── components/         # React components
+│   ├── store/              # Redux state management
+│   └── utils/              # Frontend utilities
+├── .env                    # Environment variables (create this file)
+└── package.json            # Project dependencies
 ```
 
 ## Security Features
 
-- SSL/TLS encryption
-- Database connection pooling
-- Error handling
-- Local storage fallback
+- **Authentication**: JWT tokens in HTTP-only cookies
+- **Password Storage**: bcrypt hashing
+- **Cryptographic Vote Security**: 
+  - Encrypted vote storage
+  - Verification tokens for voters
+  - Separation of identity from vote choices
+- **Transport Security**: TLS/SSL for database and API connections
+- **Rate Limiting**: Protection against brute force attacks
 
-## Future Improvements
+## API Endpoints
 
-- Password hashing
-- JWT authentication
-- Rate limiting
-- Input validation
-- HTTPS enforcement
+- **Authentication**:
+  - `POST /api/auth/register` - Register a new user
+  - `POST /api/auth/login` - Authenticate a user
+  - `POST /api/auth/logout` - Log out a user
+
+- **Standard Polls**:
+  - `GET /api/polls` - Get all polls
+  - `POST /api/polls/create` - Create a new poll
+  - `POST /api/polls/vote` - Submit a vote
+
+- **Secure Polls**:
+  - `GET /api/secure-polls` - Get all secure polls
+  - `POST /api/secure-polls/create` - Create a new secure poll
+  - `POST /api/secure-polls/vote` - Submit a secure vote
+  - `POST /api/secure-polls/verify` - Verify a vote was counted
+
+## AI-Assisted Development
+
+This project was built with the assistance of AI tools to enhance development efficiency and security:
+
+- **Code Generation**: AI assisted in generating boilerplate code and complex cryptographic functions.
+- **Security Review**: AI identified potential security vulnerabilities, including CSRF protection issues and prototype pollution vulnerabilities.
+- **Code Refactoring**: AI helped in simplifying components and extracting helper functions to improve readability and maintainability.
+- **Documentation**: AI helped generate comprehensive documentation, including installation instructions and security feature explanations.
+
+AI assistance was particularly valuable for implementing cryptographic voting features and ensuring secure authentication practices. The code was human-reviewed after generation to ensure quality and security.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-*Note: This is a development project and not intended for production use without additional security measures.*
+*Note: This application implements cryptographic security features for educational purposes. For production voting systems, additional security measures and expert review are recommended.*

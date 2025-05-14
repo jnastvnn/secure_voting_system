@@ -26,7 +26,9 @@ function Login() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        const parsedError = JSON.parse(errorText);
+        
+        
+        
         throw new Error(`Login failed: ${parsedError.error}`);
       }
 
