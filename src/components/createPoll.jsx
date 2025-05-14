@@ -8,6 +8,7 @@ function CreatePoll({ onCancel }) {
     description: '',
     options: ['', ''],
     allow_multiple_choices: false,
+    is_secure: false,
   });
 
   const dispatch = useDispatch();
@@ -59,21 +60,20 @@ function CreatePoll({ onCancel }) {
       return;
     }
 
-    const token = user?.token;
-    if (!token) {
-      dispatch(createPollFailure('You must be logged in to create a poll'));
-      return;
-    }
-
     dispatch(createPollStart());
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/polls/create`, {
+      // Choose the appropriate endpoint based on is_secure
+      const endpoint = pollData.is_secure
+        ? `${import.meta.env.VITE_API_URL}/secure-polls/create`
+        : `${import.meta.env.VITE_API_URL}/polls/create`;
+        
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        credentials: 'include', // Include cookies for auth
         body: JSON.stringify({
           title: trimmedTitle,
           description: trimmedDescription,
@@ -93,6 +93,7 @@ function CreatePoll({ onCancel }) {
         description: '',
         options: ['', ''],
         allow_multiple_choices: false,
+        is_secure: false,
       });
       onCancel?.();
     } catch (err) {
@@ -102,7 +103,7 @@ function CreatePoll({ onCancel }) {
   };
 
   return (
-    <div className="simple-create-poll">
+    <div className="create-poll-container">
       <h2>Create New Poll</h2>
       {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
@@ -181,6 +182,25 @@ function CreatePoll({ onCancel }) {
           <label htmlFor="allow_multiple_choices" className="form-check-label">
             Allow multiple choices per voter?
           </label>
+        </div>
+        <div className="form-group form-check">
+          <input
+            type="checkbox"
+            id="is_secure"
+            name="is_secure"
+            checked={pollData.is_secure}
+            onChange={handleCheckboxChange}
+            className="form-check-input"
+            disabled={loading}
+          />
+          <label htmlFor="is_secure" className="form-check-label">
+            Enable secure voting features
+          </label>
+          {pollData.is_secure && (
+            <div className="secure-features-info">
+              <p>Secure polls implement: Ballot Secrecy, Individual Verifiability, and Homomorphic-like Vote Counting.</p>
+            </div>
+          )}
         </div>
         <div className="form-actions">
           <button type="button" onClick={onCancel} disabled={loading} className="btn btn-secondary">

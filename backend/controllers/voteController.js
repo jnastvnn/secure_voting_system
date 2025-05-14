@@ -1,4 +1,3 @@
-
 import Vote from '../models/Vote.js';
 
 const voteController = {
@@ -43,11 +42,14 @@ const voteController = {
   },
 
   async submitVote(req, res) {
-    const {pollId, optionId, userId } = req.body;
-    console.log(pollId, optionId, userId); // Log the request body for debugging
+    const { pollId, optionId } = req.body;
+    // Get userId from the authenticated user in the request
+    const userId = req.user.id;
     
-    if (!pollId || !optionId || !userId) {
-      return res.status(400).json({ error: 'Poll ID, option ID, and user ID are required' });
+    console.log('Vote submission:', { pollId, optionId, userId }); // Log vote details
+    
+    if (!pollId || !optionId) {
+      return res.status(400).json({ error: 'Poll ID and option ID are required' });
     }
     
     try {
@@ -83,8 +85,6 @@ const voteController = {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
-  
-
 };
 
 export default voteController; 

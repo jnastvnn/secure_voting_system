@@ -13,9 +13,7 @@ const VotePoll = ({ poll, onBack }) => {
   const fetchVoteCounts = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/polls/poll/${poll.id}/votes`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
+        credentials: 'include',
       });
   
       if (!response.ok) throw new Error('Failed to fetch votes');
@@ -36,10 +34,10 @@ const VotePoll = ({ poll, onBack }) => {
   };
 
   useEffect(() => {
-    if (poll.id && user?.token) {
+    if (poll.id) {
       fetchVoteCounts();
     }
-  }, [poll.id, user?.token]);
+  }, [poll.id]);
 
   const handleVote = async () => {
     if (!selectedOption || !user) return;
@@ -51,12 +49,11 @@ const VotePoll = ({ poll, onBack }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           pollId: poll.id,
-          optionId: selectedOption.id,
-          userId: user.id
+          optionId: selectedOption.id
         })
       });
   

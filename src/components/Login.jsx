@@ -21,6 +21,7 @@ function Login() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
+        credentials: 'include', // Include cookies in the request
       });
 
       if (!response.ok) {
@@ -31,14 +32,12 @@ function Login() {
 
       const data = await response.json();
 
-      // Store user and token in localStorage for persistence
+      // Store only user info in Redux (no token, as it's in HTTP-only cookie)
       const currentUser = {
         id: data.user.id,
         username: data.user.username,
-        token: data.token,
       };
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
+      
       dispatch(loginSuccess(currentUser));
     } catch (err) {
       dispatch(loginFailure(err.message));

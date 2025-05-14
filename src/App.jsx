@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import './App.css'
 import Login from './components/Login'
 import SignUp from './components/SignUp'
-import Home from './components/HomeNew'
+import Home from './components/Home'
 import CreatePoll from './components/createPoll'
-import { logout } from './store/slices/authSlice'
+import { logoutUser } from './store/slices/authSlice'
 
 function App() {
   const [activeTab, setActiveTab] = useState('login');
@@ -15,15 +15,14 @@ function App() {
   const { isAuthenticated, user } = useSelector(state => state.auth);
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    dispatch(logout());
+    dispatch(logoutUser());
     setShowCreatePoll(false);
   };
 
   return (
     <div className="app-container">
       <header>
-        <h1>Secure Voting System</h1>
+        <h1>Voting System</h1>
         {isAuthenticated && (
           <div className="header-actions">
             <button onClick={() => setShowCreatePoll(!showCreatePoll)}>
@@ -39,7 +38,10 @@ function App() {
           showCreatePoll ? (
             <CreatePoll onCancel={() => setShowCreatePoll(false)} />
           ) : (
-            <Home onLogout={handleLogout} />
+            <Home 
+              onLogout={handleLogout} 
+              onCreatePoll={() => setShowCreatePoll(true)} 
+            />
           )
         ) : (
           <div className="auth-container">
