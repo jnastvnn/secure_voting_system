@@ -1,12 +1,43 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
+// Async thunk to validate session on startup
+export const validateSession = createAsyncThunk(
+  'auth/validateSession',
+  async (_, { rejectWithValue }) => {
+    try {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/auth/validate-session`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+      });
+      
+      if (response.status === 401) {
+        // Not authenticated, clear localStorage
+        localStorage.removeItem('currentUser');
+        return null;
+      }
+      
+      if (!response.ok) {
+        throw new Error('Failed to validate session');
+      }
+      
+      const data = await response.json();
+      return data.user;
+    } catch (error) {
+      // Clear localStorage on error
+      localStorage.removeItem('currentUser');
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 // Async thunk for logout to call the server
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/auth/logout`;
-      const response = await fetch(apiUrl, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include', // Include cookies
       });
@@ -35,8 +66,8 @@ const getUserFromStorage = () => {
 
 const initialState = {
   user: getUserFromStorage(),
-  isAuthenticated: !!getUserFromStorage(),
-  loading: false,
+  isAuthenticated: false, // Default to false until validated
+  loading: true, // Start with loading true to indicate validation in progress
   error: null
 };
 
@@ -82,6 +113,30 @@ export const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Handle session validation
+      .addCase(validateSession.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(validateSession.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          state.user = action.payload;
+          state.isAuthenticated = true;
+          localStorage.setItem('currentUser', JSON.stringify(action.payload));
+        } else {
+          state.user = null;
+          state.isAuthenticated = false;
+          localStorage.removeItem('currentUser');
+        }
+      })
+      .addCase(validateSession.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = action.payload;
+        localStorage.removeItem('currentUser');
+      })
+      // Handle logout
       .addCase(logoutUser.pending, (state) => {
         state.loading = true;
       })

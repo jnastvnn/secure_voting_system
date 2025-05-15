@@ -36,7 +36,8 @@ function SignUp({ onSignupSuccess }) {
     dispatch(signupStart());
 
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/auth/register`;
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = `${baseUrl}/api/auth/register`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {

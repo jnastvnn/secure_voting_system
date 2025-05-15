@@ -1,23 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import './App.css'
 import Login from './components/Login'
 import SignUp from './components/SignUp'
 import Home from './components/Home'
 import CreatePoll from './components/createPoll'
-import { logoutUser } from './store/slices/authSlice'
+import { logoutUser, validateSession } from './store/slices/authSlice'
 
 function App() {
   const [activeTab, setActiveTab] = useState('login');
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   
   const dispatch = useDispatch();
-  const { isAuthenticated, user } = useSelector(state => state.auth);
+  const { isAuthenticated, user, loading } = useSelector(state => state.auth);
+
+  // Validate the session when the component mounts
+  useEffect(() => {
+    dispatch(validateSession());
+  }, [dispatch]);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     setShowCreatePoll(false);
   };
+
+  // Show a loading indicator while checking authentication
+  if (loading) {
+    return (
+      <div className="app-container">
+        <div className="loading">Checking authentication...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -40,7 +54,6 @@ function App() {
           ) : (
             <Home 
               onLogout={handleLogout} 
-              onCreatePoll={() => setShowCreatePoll(true)} 
             />
           )
         ) : (

@@ -4,7 +4,7 @@ import VotePoll from './VotePoll';
 import SecureVotePoll from './SecureVotePoll';
 import { fetchPollsStart, fetchPollsSuccess, fetchPollsFailure, setSelectedPoll } from '../store/slices/pollsSlice';
 
-function Home({ onLogout, onCreatePoll }) {
+function Home({ onLogout }) {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const { polls, loading, error, selectedPoll } = useSelector(state => state.polls);
@@ -23,14 +23,15 @@ function Home({ onLogout, onCreatePoll }) {
 
   // Consolidated function to load all data
   const loadData = () => {
-    fetchPolls();
+    fetchStandardPolls();
     fetchSecurePolls();
   };
 
-  const fetchPolls = async () => {
+  const fetchStandardPolls = async () => {
     try {
       dispatch(fetchPollsStart());
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/polls`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls?secure=false`, {
         credentials: 'include',
       });
 
@@ -41,8 +42,21 @@ function Home({ onLogout, onCreatePoll }) {
       
       if (!response.ok) throw new Error('Failed to load polls');
       
-      const data = await response.json();
-      dispatch(fetchPollsSuccess(data));
+      // Check if there's content to parse
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        // Handle empty response
+        dispatch(fetchPollsSuccess([]));
+        return;
+      }
+      
+      try {
+        const data = JSON.parse(text);
+        dispatch(fetchPollsSuccess(data));
+      } catch (parseError) {
+        console.error('Error parsing polls data:', parseError);
+        dispatch(fetchPollsFailure('Invalid data format received from server'));
+      }
     } catch (err) {
       dispatch(fetchPollsFailure(err.message));
     }
@@ -52,7 +66,8 @@ function Home({ onLogout, onCreatePoll }) {
     try {
       setLoadingSecurePolls(true);
       setSecureError(null);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/secure-polls`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls?secure=true`, {
         credentials: 'include',
       });
 
@@ -63,8 +78,21 @@ function Home({ onLogout, onCreatePoll }) {
       
       if (!response.ok) throw new Error('Failed to load secure polls');
       
-      const data = await response.json();
-      setSecurePolls(data);
+      // Check if there's content to parse
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        // Handle empty response
+        setSecurePolls([]);
+        return;
+      }
+      
+      try {
+        const data = JSON.parse(text);
+        setSecurePolls(data);
+      } catch (parseError) {
+        console.error('Error parsing secure polls data:', parseError);
+        setSecureError('Invalid data format received from server');
+      }
     } catch (err) {
       console.error('Error loading secure polls:', err);
       setSecureError(err.message);
@@ -120,17 +148,10 @@ function Home({ onLogout, onCreatePoll }) {
         
         <div className="poll-meta">
           <span>Created: {new Date(poll.created_at).toLocaleDateString()}</span>
-          {!isSecure && (
-            <>
-              <span>•</span>
-              <span>By: {poll.created_by || 'Anonymous'}</span>
-              <span>•</span>
-              <span className={`status ${poll.is_active ? 'active' : 'closed'}`}>
-                {poll.is_active ? 'Active' : 'Closed'}
-              </span>
-            </>
-          )}
-          {isSecure && <span>Options: {poll.options.length}</span>}
+          <span>•</span>
+          <span>By: {poll.creator_username || 'Anonymous'}</span>
+          <span>•</span>
+          <span>Options: {poll.options.length}</span>
         </div>
       </div>
     </div>
@@ -168,12 +189,6 @@ function Home({ onLogout, onCreatePoll }) {
             className={`toggle-mode-btn ${secureMode ? 'secure' : 'standard'}`}
           >
             {secureMode ? 'Standard Polls' : 'Secure Voting'}
-          </button>
-          <button
-            onClick={onCreatePoll}
-            className="create-poll-btn"
-          >
-            Create Poll
           </button>
           <span className="username">{user.username}</span>
           <button 

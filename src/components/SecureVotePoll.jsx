@@ -7,22 +7,23 @@ function SecureVotePoll({ poll, onBack }) {
   const [totalVotes, setTotalVotes] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [verificationToken, setVerificationToken] = useState(null);
-  const [verificationResult, setVerificationResult] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationResult, setVerificationResult] = useState(null);
   const { user } = useSelector(state => state.auth);
 
   useEffect(() => {
     if (poll?.id) {
-      fetchVoteCounts();
       checkVoteStatus();
+      fetchVoteCounts();
     }
   }, [poll?.id]);
 
   const checkVoteStatus = async () => {
     try {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/secure-polls/poll/${poll.id}/status`, 
+        `${baseUrl}/api/polls/${poll.id}/user-voted?secure=true`, 
         { credentials: 'include' }
       );
       
@@ -37,8 +38,9 @@ function SecureVotePoll({ poll, onBack }) {
 
   const fetchVoteCounts = async () => {
     try {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/secure-polls/poll/${poll.id}/votes`, 
+        `${baseUrl}/api/polls/${poll.id}/counts?secure=true`, 
         { credentials: 'include' }
       );
   
@@ -63,7 +65,8 @@ function SecureVotePoll({ poll, onBack }) {
     setError(null);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/secure-polls/vote`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls/vote?secure=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -93,7 +96,8 @@ function SecureVotePoll({ poll, onBack }) {
     
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/secure-polls/verify`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

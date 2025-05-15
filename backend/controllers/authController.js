@@ -99,6 +99,28 @@ const authController = {
   logout(req, res) {
     res.clearCookie('authToken');
     res.json({ message: 'Logout successful' });
+  },
+  
+  // Add session validation endpoint
+  async validateSession(req, res) {
+    try {
+      // If the request made it past the authMiddleware, the user is authenticated
+      // and req.user is available
+      if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      // Get user data without password
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      res.json({ message: 'Session is valid', user });
+    } catch (err) {
+      console.error('Error validating session:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 };
 

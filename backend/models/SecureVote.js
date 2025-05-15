@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import BasePoll from './BasePoll.js';
 import {
   encryptVote,
   generateVerificationHash,
@@ -8,60 +9,54 @@ import {
   countVotesFromTally
 } from '../utils/secureVoting.js';
 
-class SecureVote {
+/**
+ * SecureVote model - Handles secure voting polls with enhanced privacy
+ * Extends BasePoll for common functionality
+ */
+class SecureVote extends BasePoll {
+  /**
+   * Get all secure polls
+   * @returns {Array} - Array of secure poll objects
+   */
   static async getAll() {
-    const result = await pool.query(`
-      SELECT 
-        p.id AS poll_id,
-        p.title AS poll_title,
-        p.description AS poll_description,
-        p.created_at,
-        p.created_by,
-        p.expires_at,
-        p.is_active,
-        p.allow_multiple_choices,
-        o.id AS option_id,
-        o.option_text
-      FROM 
-        polls p
-      JOIN 
-        poll_options po ON p.id = po.poll_id
-      JOIN 
-        options o ON po.option_id = o.id
-      ORDER BY 
-        p.id, o.id;
-    `);
-  
-    // Transform rows into a structured JSON format
-    const pollsMap = {};
-    
-    result.rows.forEach(row => {
-      if (!pollsMap[row.poll_id]) {
-        pollsMap[row.poll_id] = {
-          id: row.poll_id,
-          title: row.poll_title,
-          description: row.poll_description,
-          created_at: row.created_at,
-          created_by: row.created_by,
-          expires_at: row.expires_at,
-          is_active: row.is_active || true,
-          allow_multiple_choices: row.allow_multiple_choices,
-          options: []
-        };
-      }
+    return super.getAll(true);
+  }
+
+  /**
+   * Create a new secure poll
+   * @param {string} title - Poll title
+   * @param {string} description - Poll description
+   * @param {number} createdBy - User ID who created the poll
+   * @param {boolean} allow_multiple_choices - Whether multiple choices are allowed
+   * @param {Array<string>} options - Array of option texts
+   * @returns {Object} - The created secure poll with options
+   */
+  static async create(title, description, createdBy, allow_multiple_choices, options) {
+    const client = await pool.connect();
+    try {
+      // Create the poll using the parent class method
+      const poll = await super.create(title, description, createdBy, allow_multiple_choices, options, true);
       
-      pollsMap[row.poll_id].options.push({
-        id: row.option_id,
-        text: row.option_text
-      });
-    });
-    
-    // Convert to array
-    return Object.values(pollsMap);
+      // Initialize empty tally for the poll
+      await client.query(
+        `INSERT INTO encrypted_tallies (poll_id, tally_data)
+         VALUES ($1, '{}'::jsonb)
+         ON CONFLICT (poll_id) DO NOTHING`,
+        [poll.id]
+      );
+      
+      return poll;
+    } finally {
+      client.release();
+    }
   }
 
   /**
    * Submit a vote securely, implementing ballot secrecy and individual verifiability
+   * @param {number} pollId - Poll ID
+   * @param {number} optionId - Option ID
+   * @param {number} userId - User ID
+   * @returns {Object} - Verification info for the voter
    */
   static async submitVote(pollId, optionId, userId) {
     const client = await pool.connect();
@@ -146,7 +141,9 @@ class SecureVote {
   }
 
   /**
-   * Get vote counts for a poll using the homomorphic-like tally
+   * Get vote counts for a secure poll using the homomorphic-like tally
+   * @param {number} pollId - Poll ID
+   * @returns {Object} - Object mapping option IDs to vote counts
    */
   static async getVoteCountsByPollId(pollId) {
     const result = await pool.query(
@@ -164,6 +161,10 @@ class SecureVote {
 
   /**
    * Allow a voter to verify their vote was counted correctly
+   * @param {number} pollId - Poll ID
+   * @param {number} userId - User ID
+   * @param {string} verificationToken - Token provided to the user when voting
+   * @returns {Object} - Verification status
    */
   static async verifyVote(pollId, userId, verificationToken) {
     try {
@@ -194,6 +195,9 @@ class SecureVote {
 
   /**
    * Check if a user has already voted in a specific poll
+   * @param {number} pollId - Poll ID
+   * @param {number} userId - User ID
+   * @returns {boolean} - Whether the user has voted
    */
   static async hasUserVoted(userId, pollId) {
     const result = await pool.query(
@@ -203,89 +207,6 @@ class SecureVote {
     );
     
     return parseInt(result.rows[0].count) > 0;
-  }
-
-  /**
-   * Create a new poll (reusing existing functionality)
-   */
-  static async create(title, description, createdBy, allow_multiple_choices, options) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      // Insert poll into polls table
-      const pollInsertQuery = `
-        INSERT INTO polls (
-          title,
-          description,
-          created_by,
-          allow_multiple_choices
-        ) VALUES ($1, $2, $3, $4)
-        RETURNING *
-      `;
-      const pollResult = await client.query(pollInsertQuery, [
-        title,
-        description || null,
-        createdBy || null,
-        allow_multiple_choices ?? false
-      ]);
-      const poll = pollResult.rows[0];
-      
-      for (const option_text of options) {
-        // Insert the option with upsert logic
-        const optionInsertQuery = `
-          INSERT INTO options (option_text)
-          VALUES ($1)
-          ON CONFLICT (option_text)
-            DO UPDATE SET option_text = EXCLUDED.option_text
-          RETURNING id
-        `;
-        const optionResult = await client.query(optionInsertQuery, [option_text]);
-        let optionId;
-        
-        if (optionResult.rows.length > 0) {
-          optionId = optionResult.rows[0].id;
-        } else {
-          // Fetch the existing option id
-          const fallbackResult = await client.query(
-            `SELECT id FROM options WHERE option_text = $1`,
-            [option_text]
-          );
-          if (fallbackResult.rows.length > 0) {
-            optionId = fallbackResult.rows[0].id;
-          } else {
-            throw new Error('Failed to retrieve option id');
-          }
-        }
-  
-        // Link the poll with this option
-        const pollOptionsInsertQuery = `
-          INSERT INTO poll_options (poll_id, option_id)
-          VALUES ($1, $2)
-        `;
-        await client.query(pollOptionsInsertQuery, [poll.id, optionId]);
-      }
-  
-      // Initialize empty tally for the poll
-      await client.query(
-        `INSERT INTO encrypted_tallies (poll_id, tally_data)
-         VALUES ($1, '{}'::jsonb)`,
-        [poll.id]
-      );
-      
-      await client.query('COMMIT');
-      
-      return {
-        ...poll,
-        options: options.map(text => ({ text }))
-      };
-  
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw new Error(`Failed to create poll: ${error.message}`);
-    } finally {
-      client.release();
-    }
   }
 }
 

@@ -12,7 +12,8 @@ const VotePoll = ({ poll, onBack }) => {
 
   const fetchVoteCounts = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/polls/poll/${poll.id}/votes`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls/${poll.id}/counts?secure=false`, {
         credentials: 'include',
       });
   
@@ -45,7 +46,8 @@ const VotePoll = ({ poll, onBack }) => {
     dispatch(submitVoteStart());
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/polls/vote`, {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/polls/vote?secure=false`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

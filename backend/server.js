@@ -9,8 +9,7 @@ import cookieParser from 'cookie-parser';
 // import csrfProtection from './middleware/csrfMiddleware.js'; // Removed CSRF
 
 import authRoutes from './routes/authRoutes.js';
-import voteRoutes from './routes/voteRoutes.js';
-import secureVoteRoutes from './routes/secureVoteRoutes.js';
+import pollRoutes from './routes/pollRoutes.js';
 import initializeDatabase from './utils/dbInit.js';
 
 // ES Module equivalents for __dirname and __filename
@@ -25,7 +24,7 @@ const PORT = process.env.PORT || 3000;
 // Configure rate limiters
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 100 requests per windowMs
   standardHeaders: true,
   message: { error: 'Too many requests, please try again later' }
 });
@@ -61,8 +60,7 @@ app.use('/api/auth/register', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/polls', voteRoutes);
-app.use('/api/secure-polls', secureVoteRoutes);
+app.use('/api/polls', pollRoutes);
 
 // Serve static files after API routes
 app.use(express.static(path.join(__dirname, '../dist')));

@@ -62,10 +62,9 @@ function CreatePoll({ onCancel }) {
     dispatch(createPollStart());
 
     try {
-      // Choose the appropriate endpoint based on is_secure
-      const endpoint = pollData.is_secure
-        ? `${import.meta.env.VITE_API_URL}/secure-polls/create`
-        : `${import.meta.env.VITE_API_URL}/polls/create`;
+      // Use the unified API endpoint with secure query parameter
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const endpoint = `${baseUrl}/api/polls/create?secure=${pollData.is_secure}`;
         
       const response = await fetch(endpoint, {
         method: 'POST',

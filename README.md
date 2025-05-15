@@ -33,6 +33,7 @@ SECRET=your_jwt_secret_key
 FRONTEND_URL=http://localhost:5173
 VOTE_ENCRYPTION_KEY=your_vote_encryption_key
 NODE_ENV=development
+VITE_API_URL=http://localhost:3000
 ```
 
 ### Database Setup
@@ -48,7 +49,6 @@ CREATE DATABASE voting_db;
 git clone https://github.com/yourusername/secure_voting_system.git
 cd secure_voting_system
 ```
-
 2. Install dependencies for both frontend and backend:
 ```bash
 npm install
@@ -91,7 +91,6 @@ secure_voting_system/
 ├── .env                    # Environment variables (create this file)
 └── package.json            # Project dependencies
 ```
-
 ## Security Features
 
 - **Authentication**: JWT tokens in HTTP-only cookies
@@ -126,7 +125,6 @@ secure_voting_system/
 This project was built with the assistance of AI tools to enhance development efficiency and security:
 
 - **Code Generation**: AI assisted in generating boilerplate code and complex cryptographic functions.
-- **Security Review**: AI identified potential security vulnerabilities, including CSRF protection issues and prototype pollution vulnerabilities.
 - **Code Refactoring**: AI helped in simplifying components and extracting helper functions to improve readability and maintainability.
 - **Documentation**: AI helped generate comprehensive documentation, including installation instructions and security feature explanations.
 
@@ -138,3 +136,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 *Note: This application implements cryptographic security features for educational purposes. For production voting systems, additional security measures and expert review are recommended.*
+
+

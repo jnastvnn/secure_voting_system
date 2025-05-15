@@ -14,7 +14,8 @@ function Login() {
     dispatch(loginStart());
 
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/auth/login`;
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = `${baseUrl}/api/auth/login`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -26,9 +27,12 @@ function Login() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        
-        
-        
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch (e) {
+          parsedError = { error: errorText || response.statusText || 'Unknown error' };
+        }
         throw new Error(`Login failed: ${parsedError.error}`);
       }
 
