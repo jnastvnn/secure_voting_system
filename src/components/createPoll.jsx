@@ -63,7 +63,7 @@ function CreatePoll({ onCancel }) {
 
     try {
       // Use the unified API endpoint with secure query parameter
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const endpoint = `${baseUrl}/api/polls/create?secure=${pollData.is_secure}`;
         
       const response = await fetch(endpoint, {

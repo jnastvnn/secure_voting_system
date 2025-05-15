@@ -14,7 +14,7 @@ function Login() {
     dispatch(loginStart());
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const apiUrl = `${baseUrl}/api/auth/login`;
       const response = await fetch(apiUrl, {
         method: 'POST',

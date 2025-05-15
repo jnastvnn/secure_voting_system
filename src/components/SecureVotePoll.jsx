@@ -21,7 +21,7 @@ function SecureVotePoll({ poll, onBack }) {
 
   const checkVoteStatus = async () => {
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(
         `${baseUrl}/api/polls/${poll.id}/user-voted?secure=true`, 
         { credentials: 'include' }
@@ -38,7 +38,7 @@ function SecureVotePoll({ poll, onBack }) {
 
   const fetchVoteCounts = async () => {
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(
         `${baseUrl}/api/polls/${poll.id}/counts?secure=true`, 
         { credentials: 'include' }
@@ -65,7 +65,7 @@ function SecureVotePoll({ poll, onBack }) {
     setError(null);
     
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${baseUrl}/api/polls/vote?secure=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,7 @@ function SecureVotePoll({ poll, onBack }) {
     
     setLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${baseUrl}/api/polls/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

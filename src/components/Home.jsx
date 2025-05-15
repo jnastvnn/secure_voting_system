@@ -66,7 +66,7 @@ function Home({ onLogout }) {
     try {
       setLoadingSecurePolls(true);
       setSecureError(null);
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${baseUrl}/api/polls?secure=true`, {
         credentials: 'include',
       });

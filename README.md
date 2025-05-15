@@ -10,6 +10,8 @@ A secure electronic voting application with cryptographic verification features,
 - **Homomorphic-like Vote Counting**: Votes are tallied without decrypting individual ballots
 - **Rate Limiting**: Protection against brute force and DOS attacks
 - **Database Storage**: PostgreSQL for secure, reliable data persistence
+- **Unified API**: Single API endpoint with query parameters to handle both standard and secure polls
+- **Object-Oriented Architecture**: Class inheritance for improved code reuse and maintainability
 
 ## Technologies
 
@@ -81,6 +83,10 @@ secure_voting_system/
 │   ├── controllers/        # Request handlers
 │   ├── middleware/         # Authentication & rate limiting
 │   ├── models/             # Database models
+│   │   ├── BasePoll.js     # Abstract base class for polls
+│   │   ├── Vote.js         # Standard poll model
+│   │   ├── SecureVote.js   # Secure poll model
+│   │   └── User.js         # User model
 │   ├── routes/             # API routes
 │   ├── utils/              # Cryptographic utilities
 │   └── server.js           # Express server entry point
@@ -91,6 +97,15 @@ secure_voting_system/
 ├── .env                    # Environment variables (create this file)
 └── package.json            # Project dependencies
 ```
+
+## Architecture
+
+The application uses an object-oriented approach with inheritance:
+
+- `BasePoll`: An abstract base class that contains common functionality for all types of polls
+- `Vote`: Extends BasePoll to implement standard voting functionality
+- `SecureVote`: Extends BasePoll to add secure voting features
+
 ## Security Features
 
 - **Authentication**: JWT tokens in HTTP-only cookies
@@ -108,17 +123,15 @@ secure_voting_system/
   - `POST /api/auth/register` - Register a new user
   - `POST /api/auth/login` - Authenticate a user
   - `POST /api/auth/logout` - Log out a user
+  - `GET /api/auth/validate-session` - Validate user session
 
-- **Standard Polls**:
-  - `GET /api/polls` - Get all polls
-  - `POST /api/polls/create` - Create a new poll
-  - `POST /api/polls/vote` - Submit a vote
-
-- **Secure Polls**:
-  - `GET /api/secure-polls` - Get all secure polls
-  - `POST /api/secure-polls/create` - Create a new secure poll
-  - `POST /api/secure-polls/vote` - Submit a secure vote
-  - `POST /api/secure-polls/verify` - Verify a vote was counted
+- **Unified Poll API**:
+  - `GET /api/polls?secure=[true|false]` - Get all polls (secure or standard)
+  - `POST /api/polls/create?secure=[true|false]` - Create a new poll (secure or standard)
+  - `POST /api/polls/vote?secure=[true|false]` - Submit a vote (secure or standard)
+  - `GET /api/polls/:pollId/counts?secure=[true|false]` - Get vote counts for a poll
+  - `POST /api/polls/verify` - Verify a secure vote was counted
+  - `GET /api/polls/:pollId/user-voted` - Check if user voted on a secure poll
 
 ## AI-Assisted Development
 
@@ -127,6 +140,7 @@ This project was built with the assistance of AI tools to enhance development ef
 - **Code Generation**: AI assisted in generating boilerplate code and complex cryptographic functions.
 - **Code Refactoring**: AI helped in simplifying components and extracting helper functions to improve readability and maintainability.
 - **Documentation**: AI helped generate comprehensive documentation, including installation instructions and security feature explanations.
+- **Architecture Improvements**: AI helped implement inheritance-based architecture to reduce code duplication.
 
 AI assistance was particularly valuable for implementing cryptographic voting features and ensuring secure authentication practices. The code was human-reviewed after generation to ensure quality and security.
 
