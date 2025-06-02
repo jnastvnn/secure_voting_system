@@ -13,7 +13,7 @@
     "start": "node backend/server.js"
   },
   "dependencies": {
-    "@reduxjs/toolkit": "^2.2.1",
+    "@reduxjs/toolkit": "^2.8.1",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
